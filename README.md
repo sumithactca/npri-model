@@ -1,1 +1,1 @@
-# npri-model
+# NPRI-model
