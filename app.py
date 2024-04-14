@@ -24,7 +24,8 @@ st.markdown(
         margin-right: 10px;
         margin-bottom: 10px;
         display: inline-block;
-        width: 200px; /* Adjust the width of the feature boxes */
+        width: 150px; /* Adjust the width of the feature boxes */
+        text-align: center; /* Center align text */
     }
     .feature-box:nth-child(even) {
         background-color: #a9cce3; /* Light blue for alternate boxes */
@@ -40,6 +41,10 @@ st.markdown(
     }
     .selected-feature {
         font-weight: bold; /* Make selected feature text bold */
+    }
+    .predicted-quantity {
+        font-weight: bold; /* Make predicted quantity text bold */
+        color: #000000; /* Black text color */
     }
     </style>
     """,
@@ -61,7 +66,7 @@ def user_input_features():
     number_of_employees = st.sidebar.number_input('Number of Employees', min_value=1, max_value=5000, value=10, step=1)
     growth_input = st.sidebar.radio('Growth', ('up', 'down'))
     Price_input = st.sidebar.radio('Price', ('up', 'down'))
-
+    
     user_input_data = {'Company Name': company_name,
                        'Province': province,
                        'Substance Name': substance_name,
@@ -77,52 +82,47 @@ df_user_input = user_input_features()
 
 st.write(df_user_input.style.set_properties(**{'font-weight': 'bold'}))
 
-# Placeholder for displaying predicted quantity for 2023
+# Placeholder for displaying predicted quantities for 2023 to 2027
 st.markdown("<hr>", unsafe_allow_html=True)
-st.write("<p class='title-text'><b>Predicted Quantity For 2023:</b></p>", unsafe_allow_html=True)
+st.write("<p class='title-text'><b>Predicted Quantities For 2023 to 2027:</b></p>", unsafe_allow_html=True)
 
-# Filter data for the selected company name and substance name for the year 2022
-filtered_data = df_ML[(df_ML['Company name'] == df_user_input['Company Name'].iloc[0]) &
-                      (df_ML['Substance name'] == df_user_input['Substance Name'].iloc[0]) &
-                      (df_ML['NPRI_Report_ReportYear'] == 2022)]
+# Filter data for the selected substance name and company name
+selected_substance_name = df_user_input['Substance Name'].iloc[0]
+selected_company_name = df_user_input['Company Name'].iloc[0]
+filtered_data = df_ML[(df_ML['Substance name'] == selected_substance_name) & (df_ML['Company name'] == selected_company_name)]
 
 if not filtered_data.empty:
-    # Fetch the current year quantity for 2022
-    current_year_quantity = filtered_data['Current year quantity'].iloc[0]
+    # Train a Linear Regression model using data from 2014 to 2021
+    model = LinearRegression()
+    model.fit(df_ML[['Last year quantity', 'Two years ago quantity', 'Three years ago quantity',
+                     'Number of employees', 'Growth', 'Price']][df_ML['NPRI_Report_ReportYear'] < 2022],
+              df_ML['Current year quantity'][df_ML['NPRI_Report_ReportYear'] < 2022])
 
-    # Encode growth
-    growth_mapping = {'up': 1, 'down': 0}
-    growth_encoded = growth_mapping[df_user_input['Growth'].iloc[0]]
-
-    # Encode price
-    price_mapping = {'up': 1, 'down': 0}
-    price_encoded = price_mapping[df_user_input['Price'].iloc[0]]
-
-    # Assign the fetched quantities to the corresponding placeholders
+    # Initialize input data for prediction
     input_data = {
         'Last year quantity': [filtered_data['Current year quantity'].iloc[0]],
         'Two years ago quantity': [filtered_data['Last year quantity'].iloc[0]],
         'Three years ago quantity': [filtered_data['Two years ago quantity'].iloc[0]],
         'Number of employees': [df_user_input['Number of Employees'].iloc[0]],
-        'Growth': [growth_encoded],
-        'Price': [price_encoded],
+        'Growth': [1 if df_user_input['Growth'].iloc[0] == 'up' else 0],
+        'Price': [1 if df_user_input['Price'].iloc[0] == 'up' else 0],
     }
 
-    # Train a Linear Regression model
-    model = LinearRegression()
-    model.fit(df_ML[['Last year quantity', 'Two years ago quantity', 'Three years ago quantity',
-                     'Number of employees', 'Growth', 'Price']], df_ML['Current year quantity'])
+    # Predict quantities for the next five years (2023 to 2027)
+    predicted_quantities = []
+    for year in range(2023, 2028):
+        prediction = model.predict(pd.DataFrame(input_data))
+        predicted_quantities.append(prediction[0])
+        # Update input data for the next prediction
+        input_data['Three years ago quantity'] = input_data['Two years ago quantity']
+        input_data['Two years ago quantity'] = input_data['Last year quantity']
+        input_data['Last year quantity'] = [prediction[0]]
 
-    # Make prediction for 2023
-    prediction = model.predict(pd.DataFrame(input_data))
-
-    # Round the prediction to five decimal places
-    rounded_prediction = round(prediction[0], 5)
-
-    # Display the rounded predicted quantity for 2023
-    st.write(f"<div class='feature-box'><b>{rounded_prediction}</b></div>", unsafe_allow_html=True)
+    # Display the predicted quantities for the next five years
+    for year, quantity in zip(range(2023, 2028), predicted_quantities):
+        st.write(f"<p class='predicted-quantity'>Predicted quantity for {year}:</p>", unsafe_allow_html=True)
+        st.write(f"<div class='feature-box'><p class='predicted-quantity'>{quantity:.5f}</p></div>", unsafe_allow_html=True)
 else:
-    st.write("<p class='subheader-text'>No data available for the selected company name and substance name for the year 2022.</p>", unsafe_allow_html=True)
-
+    st.write(f"<p class='subheader-text'>No data available for {selected_substance_name} for {selected_company_name}.</p>", unsafe_allow_html=True)
 st.write("Chat Assistance:")
 st.write("""<iframe src="https://hf.co/chat/assistant/661b432f5693cfc26defd2c3" width="1000" height="600" frameborder="0"></iframe>""", unsafe_allow_html=True)
