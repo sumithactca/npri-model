@@ -61,7 +61,7 @@ def user_input_features():
     number_of_employees = st.sidebar.number_input('Number of Employees', min_value=1, max_value=5000, value=10, step=1)
     growth_input = st.sidebar.radio('Growth', ('up', 'down'))
     Price_input = st.sidebar.radio('Price', ('up', 'down'))
-    
+
     user_input_data = {'Company Name': company_name,
                        'Province': province,
                        'Substance Name': substance_name,
@@ -79,7 +79,7 @@ st.write(df_user_input.style.set_properties(**{'font-weight': 'bold'}))
 
 # Placeholder for displaying predicted quantity for 2023
 st.markdown("<hr>", unsafe_allow_html=True)
-st.write("<p class='title-text'><b>Predicted Quantity:</b></p>", unsafe_allow_html=True)
+st.write("<p class='title-text'><b>Predicted Quantity For 2023:</b></p>", unsafe_allow_html=True)
 
 # Filter data for the selected company name and substance name for the year 2022
 filtered_data = df_ML[(df_ML['Company name'] == df_user_input['Company Name'].iloc[0]) &
@@ -116,7 +116,13 @@ if not filtered_data.empty:
     # Make prediction for 2023
     prediction = model.predict(pd.DataFrame(input_data))
 
-    # Display the predicted quantity for 2023
-    st.write(f"<div class='feature-box'><b>{prediction[0]}</b></div>", unsafe_allow_html=True)
+    # Round the prediction to five decimal places
+    rounded_prediction = round(prediction[0], 5)
+
+    # Display the rounded predicted quantity for 2023
+    st.write(f"<div class='feature-box'><b>{rounded_prediction}</b></div>", unsafe_allow_html=True)
 else:
     st.write("<p class='subheader-text'>No data available for the selected company name and substance name for the year 2022.</p>", unsafe_allow_html=True)
+
+st.write("Chat Assistance:")
+st.write("""<iframe src="https://hf.co/chat/assistant/661b432f5693cfc26defd2c3" width="1000" height="600" frameborder="0"></iframe>""", unsafe_allow_html=True)
